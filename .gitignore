@@ -1,0 +1,41 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+.env/
+.venv/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment variables
+.env
+.env.*
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+*.psql
+*.postgresql
+*.mysql
+*.db-shm
+*.db-wal
+
+# Database backups
+*.dump
+*.backup
+*.bak
