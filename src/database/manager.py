@@ -20,9 +20,6 @@ class DatabaseManager:
     def __init__(self, db_url: str = settings.database_url):
         self.engine = create_engine(
             db_url,
-            pool_size=settings.database_pool_size,
-            max_overflow=settings.database_max_overflow,
-            pool_timeout=settings.database_pool_timeout,
             echo=settings.database_echo,
         )
         self.SessionLocal = sessionmaker(

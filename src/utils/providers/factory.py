@@ -1,12 +1,10 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 from .base import BaseProvider
 from .groq import GroqProvider
 from .openai import OpenAIProvider
 
 
 class ProviderFactory:
-    _instances: Dict[str, BaseProvider] = {}
-
     @classmethod
     def create_provider(
         cls,
@@ -16,52 +14,53 @@ class ProviderFactory:
         base_url: Optional[str] = None,
         **kwargs,
     ) -> BaseProvider:
-        # Create a unique key for the instance
-        instance_key = f"{provider_name}_{identifier}"
+        """
+        Create a new provider instance based on the provider name.
 
-        # Return existing instance if it exists
-        if instance_key in cls._instances:
-            return cls._instances[instance_key]
+        Args:
+            provider_name: Name of the provider (e.g., 'groq', 'openai')
+            api_key: API key for the provider
+            identifier: Optional identifier for the provider instance
+            base_url: Optional custom base URL for the provider
+            **kwargs: Additional provider-specific arguments
 
-        # Create new instance
-        if provider_name.lower() == "groq":
-            provider = GroqProvider(
+        Returns:
+            An instance of the specified provider
+
+        Raises:
+            ValueError: If an unsupported provider is specified
+        """
+        # Normalize provider name to lowercase for case-insensitive matching
+        provider_name = provider_name.lower()
+
+        # Create provider instances based on name
+        if provider_name == "groq":
+            return GroqProvider(
                 api_key=api_key,
                 identifier=identifier,
                 base_url=base_url or "https://api.groq.com/openai/v1",
             )
-        elif provider_name.lower() == "openai":
-            provider = OpenAIProvider(
+        elif provider_name == "openai":
+            return OpenAIProvider(
                 api_key=api_key,
                 identifier=identifier,
                 base_url=base_url or "https://api.openai.com/v1",
                 organization=kwargs.get("organization"),
             )
         else:
-            raise ValueError(f"Unsupported provider: {provider_name}")
-
-        # Store and return the new instance
-        cls._instances[instance_key] = provider
-        return provider
-
-    @classmethod
-    def get_provider(
-        cls, provider_name: str, identifier: str = "default"
-    ) -> Optional[BaseProvider]:
-        """Retrieve an existing provider instance by name and identifier."""
-        instance_key = f"{provider_name}_{identifier}"
-        return cls._instances.get(instance_key)
+            # Provide a helpful error message for unsupported providers
+            supported_providers = ["groq", "openai"]
+            raise ValueError(
+                f"Unsupported provider: {provider_name}. "
+                f"Supported providers are: {', '.join(supported_providers)}"
+            )
 
     @classmethod
-    def list_providers(cls) -> Dict[str, str]:
-        """List all active provider instances and their identifiers."""
-        return {key: provider.identifier for key, provider in cls._instances.items()}
+    def get_supported_providers(cls) -> list:
+        """
+        Return a list of supported provider names.
 
-    @classmethod
-    def remove_provider(cls, provider_name: str, identifier: str = "default") -> bool:
-        """Remove a provider instance from the factory."""
-        instance_key = f"{provider_name}_{identifier}"
-        if instance_key in cls._instances:
-            del cls._instances[instance_key]
-            return True
-        return False
+        Returns:
+            List of supported provider names
+        """
+        return ["groq", "openai"]
