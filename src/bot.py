@@ -29,6 +29,7 @@ class NexusBot(commands.Bot):
 
         # Initialize database
         try:
+            # Load and create all database tables
             self.db.create_all()
             logger.info("Database initialized")
         except Exception as e:
