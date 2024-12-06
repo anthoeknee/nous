@@ -9,7 +9,7 @@ from src.feature_manager import FeatureManager
 settings = conf()
 
 
-class NexusBot(commands.Bot):
+class NousBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
         intents.message_content = True
@@ -22,10 +22,30 @@ class NexusBot(commands.Bot):
         )
 
         self.db = db
+        self.providers = {}
 
     async def setup_hook(self):
         """Initialize bot services and load cogs"""
         logger.info("Initializing services...")
+
+        # Initialize providers
+        try:
+            from src.utils.providers import ProviderFactory
+
+            # Initialize OpenAI provider
+            self.providers["openai"] = ProviderFactory.create_provider(
+                "openai", api_key=settings.openai_api_key, identifier="default"
+            )
+
+            # Initialize Groq provider
+            self.providers["groq"] = ProviderFactory.create_provider(
+                "groq", api_key=settings.groq_api_key, identifier="default"
+            )
+
+            logger.info("AI providers initialized")
+        except Exception as e:
+            logger.error(f"Provider initialization failed: {str(e)}")
+            raise
 
         # Initialize database
         try:
@@ -72,3 +92,12 @@ class NexusBot(commands.Bot):
             error_message = str(error)
 
         await ctx.send(error_message)
+
+    async def close(self):
+        """Cleanup when bot is shutting down"""
+        # Close provider connections
+        for provider in self.providers.values():
+            await provider.close()
+
+        # Call parent close method
+        await super().close()
