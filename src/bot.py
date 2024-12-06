@@ -3,7 +3,8 @@ from discord.ext import commands
 from src.config import conf
 from src.database.manager import db
 from src.utils.logging import logger
-from src.events import events, Event, MessageEvent, CommandEvent, ErrorEvent
+from src.events import events, ErrorEvent
+from src.feature_manager import FeatureManager
 
 settings = conf()
 
@@ -34,22 +35,9 @@ class NexusBot(commands.Bot):
             logger.error(f"Database initialization failed: {str(e)}")
             raise
 
-        # Load extensions
-        await self.load_extensions()
-
-    async def load_extensions(self):
-        """Load all cog extensions"""
-        extensions = [
-            "src.cogs.admin",
-            "src.cogs.general",
-        ]
-
-        for extension in extensions:
-            try:
-                await self.load_extension(extension)
-                logger.info(f"Loaded: {extension}")
-            except Exception as e:
-                logger.error(f"Failed to load {extension}: {str(e)}")
+        # Initialize feature manager and load features
+        self.feature_manager = FeatureManager(self)
+        await self.feature_manager.load_all_features()
 
     async def on_ready(self):
         """Called when the bot is ready"""
