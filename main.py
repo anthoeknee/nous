@@ -1,6 +1,6 @@
 import asyncio
 import sys
-from src.bot import NexusBot
+from src.bot import NousBot
 from src.config import conf
 from src.utils.logging import logger
 
@@ -13,7 +13,7 @@ async def main():
         logger.info("Starting Nexus Bot...")
         logger.info(f"Command prefix: {settings.discord_command_prefix}")
 
-        bot = NexusBot()
+        bot = NousBot()
         async with bot:
             await bot.start(settings.discord_token)
 
