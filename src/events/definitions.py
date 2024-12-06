@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from .types import EventType
 
 
@@ -59,3 +59,29 @@ class ErrorEvent(Event):
         super().__init__(type=EventType.ERROR)
         self.error = error
         self.context = context
+
+
+@dataclass
+class DatabaseEvent(Event):
+    """Event fired for database operations"""
+
+    operation: str
+    model: str
+    data: Dict[str, Any]
+    success: bool
+    error: Optional[Exception] = None
+
+    def __init__(
+        self,
+        operation: str,
+        model: str,
+        data: Dict[str, Any],
+        success: bool,
+        error: Optional[Exception] = None,
+    ):
+        super().__init__(type=EventType.DATABASE_OPERATION)
+        self.operation = operation
+        self.model = model
+        self.data = data
+        self.success = success
+        self.error = error

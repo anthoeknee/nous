@@ -49,5 +49,8 @@ class EventType(Enum):
     # Custom events
     CUSTOM_EVENT = auto()  # For user-defined events
 
+    # Database events
+    DATABASE_OPERATION = auto()
+
     def __str__(self) -> str:
         return self.name.lower()
