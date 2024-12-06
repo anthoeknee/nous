@@ -1,7 +1,8 @@
 import base64
 import httpx
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, BinaryIO
 from .base import BaseProvider
+import os
 
 
 class GroqProvider(BaseProvider):
@@ -43,7 +44,7 @@ class GroqProvider(BaseProvider):
     async def chat_completion(
         self,
         messages: List[Dict[str, Any]],
-        model: str = "llama-3.2-11b-vision-preview",
+        model: str = "llama-3.3-70b-versatile",
         temperature: float = 1.0,
         tools: Optional[List[Dict[str, Any]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
@@ -98,3 +99,91 @@ class GroqProvider(BaseProvider):
     async def close(self):
         """Close the HTTP client session."""
         await self.client.aclose()
+
+    async def transcribe(
+        self,
+        file: Union[str, BinaryIO],
+        model: str = "whisper-large-v3-turbo",
+        prompt: Optional[str] = None,
+        response_format: str = "json",
+        language: Optional[str] = None,
+        temperature: float = 0.0,
+    ) -> Dict[str, Any]:
+        """
+        Transcribe audio to text using Groq's Whisper models.
+
+        Args:
+            file: Path to audio file or file-like object
+            model: Whisper model to use
+            prompt: Optional context or spelling guidance
+            response_format: Response format (json, text, srt, etc.)
+            language: Optional ISO language code
+            temperature: Sampling temperature
+        """
+        data = {}
+        files = {}
+
+        # Handle file input
+        if isinstance(file, str):
+            files["file"] = ("audio.mp3", open(file, "rb"))
+        else:
+            files["file"] = ("audio.mp3", file)
+
+        # Add optional parameters
+        data["model"] = model
+        if prompt:
+            data["prompt"] = prompt
+        if response_format:
+            data["response_format"] = response_format
+        if language:
+            data["language"] = language
+        if temperature is not None:
+            data["temperature"] = temperature
+
+        async with self.client as client:
+            response = await client.post(
+                "/audio/transcriptions", data=data, files=files
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def translate(
+        self,
+        file: Union[str, BinaryIO],
+        model: str = "whisper-large-v3",
+        prompt: Optional[str] = None,
+        response_format: str = "json",
+        temperature: float = 0.0,
+    ) -> Dict[str, Any]:
+        """
+        Translate audio directly to English text using Groq's Whisper models.
+
+        Args:
+            file: Path to audio file or file-like object
+            model: Whisper model to use
+            prompt: Optional context or spelling guidance
+            response_format: Response format (json, text, srt, etc.)
+            temperature: Sampling temperature
+        """
+        data = {}
+        files = {}
+
+        # Handle file input
+        if isinstance(file, str):
+            files["file"] = ("audio.mp3", open(file, "rb"))
+        else:
+            files["file"] = ("audio.mp3", file)
+
+        # Add optional parameters
+        data["model"] = model
+        if prompt:
+            data["prompt"] = prompt
+        if response_format:
+            data["response_format"] = response_format
+        if temperature is not None:
+            data["temperature"] = temperature
+
+        async with self.client as client:
+            response = await client.post("/audio/translations", data=data, files=files)
+            response.raise_for_status()
+            return response.json()
