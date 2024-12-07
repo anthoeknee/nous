@@ -7,6 +7,9 @@ from src.events import events, ErrorEvent
 from src.feature_manager import FeatureManager
 from src.database.repositories.settings import SettingRepository
 from src.database.repositories.permissions import PermissionRepository
+from src.services.manager import ServiceManager
+from src.services.ai_provider import AIProviderService
+from src.services.database import DatabaseService
 
 settings = conf()
 
@@ -24,7 +27,8 @@ class NousBot(commands.Bot):
         )
 
         self.db = db
-        self.providers = {}
+        self.services = ServiceManager()
+
         # Initialize repositories
         self.settings_repo = SettingRepository()
         self.permissions_repo = PermissionRepository()
@@ -33,36 +37,24 @@ class NousBot(commands.Bot):
         """Initialize bot services and load cogs"""
         logger.info("Initializing services...")
 
-        # Initialize providers
+        # Initialize services
         try:
-            from src.utils.providers import ProviderFactory
+            # Register database service
+            self.services.register("database", DatabaseService())
 
-            # Initialize OpenAI provider
-            self.providers["openai"] = ProviderFactory.create_provider(
-                "openai", api_key=settings.openai_api_key, identifier="default"
-            )
+            # Register AI provider service
+            self.services.register("ai_provider", AIProviderService())
 
-            # Initialize Groq provider
-            self.providers["groq"] = ProviderFactory.create_provider(
-                "groq", api_key=settings.groq_api_key, identifier="default"
-            )
+            # Initialize all services
+            await self.services.initialize_all()
 
-            logger.info("AI providers initialized")
+            # Register repositories with database service
+            db_service = self.services.get("database", DatabaseService)
+            db_service.register_repository("settings", self.settings_repo)
+            db_service.register_repository("permissions", self.permissions_repo)
+
         except Exception as e:
-            logger.error(f"Provider initialization failed: {str(e)}")
-            raise
-
-        # Initialize database
-        try:
-            # Load and create all database tables
-            self.db.create_all()
-            logger.info("Database initialized")
-
-            # Initialize default permissions if needed
-            await self._initialize_default_permissions()
-            logger.info("Default permissions initialized")
-        except Exception as e:
-            logger.error(f"Database initialization failed: {str(e)}")
+            logger.error(f"Service initialization failed: {str(e)}")
             raise
 
         # Initialize feature manager and load features
@@ -147,9 +139,8 @@ class NousBot(commands.Bot):
 
     async def close(self):
         """Cleanup when bot is shutting down"""
-        # Close provider connections
-        for provider in self.providers.values():
-            await provider.close()
+        # Cleanup services
+        await self.services.cleanup_all()
 
         # Call parent close method
         await super().close()

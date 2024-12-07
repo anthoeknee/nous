@@ -10,6 +10,7 @@ from src.events import events, DatabaseEvent
 from src.config import Settings
 from alembic import command
 from alembic.config import Config
+import asyncio
 
 Base = declarative_base()
 
@@ -21,6 +22,9 @@ class DatabaseManager:
         self.engine = create_engine(
             db_url,
             echo=settings.database_echo,
+            pool_size=settings.database_pool_size,
+            max_overflow=settings.database_max_overflow,
+            pool_timeout=settings.database_pool_timeout,
         )
         self.SessionLocal = sessionmaker(
             autocommit=False, autoflush=False, bind=self.engine
@@ -44,13 +48,29 @@ class DatabaseManager:
 
     @contextmanager
     def get_session(self) -> Generator[Session, Any, None]:
-        """Get a database session"""
+        """Get a database session with improved error handling"""
         session = self.SessionLocal()
         try:
             yield session
             session.commit()
-        except Exception:
+            # Emit success event
+            asyncio.create_task(
+                self.emit_db_event(
+                    operation="transaction", model="session", data={}, success=True
+                )
+            )
+        except Exception as e:
             session.rollback()
+            # Emit error event
+            asyncio.create_task(
+                self.emit_db_event(
+                    operation="transaction",
+                    model="session",
+                    data={},
+                    success=False,
+                    error=e,
+                )
+            )
             raise
         finally:
             session.close()
