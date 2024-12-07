@@ -1,16 +1,20 @@
-2024-12-06 22:27:24 INFO     bot: Starting Nexus Bot...
-2024-12-06 22:27:24 INFO     bot: Command prefix: n!
-2024-12-06 22:27:24 INFO     bot: Initializing services...
-2024-12-06 22:27:24 INFO     bot: AI providers initialized
-2024-12-06 22:27:24 INFO     bot: Database initialized
-2024-12-06 22:27:24 INFO     bot: Example feature initialized
-2024-12-06 22:27:24 INFO     bot: Loaded feature: example
-2024-12-06 22:27:24 INFO     bot: LLMHandler initialized
-2024-12-06 22:27:24 INFO     bot: LLM feature initialized
-2024-12-06 22:27:24 INFO     bot: Loaded feature: llm
-2024-12-06 22:27:24 INFO     bot: Summary feature initialized
-2024-12-06 22:27:24 INFO     bot: Loaded feature: summary
-2024-12-06 22:27:27 INFO     bot: Logged in as Nous
-2024-12-06 22:27:27 INFO     bot: Serving 5 guilds
-2024-12-06 22:27:37 INFO     bot: Creating new Groq provider for summary
-2024-12-06 22:27:40 INFO     bot: Bot shutdown by user
+2024-12-07 01:07:49 INFO     bot: Starting Nexus Bot...
+2024-12-07 01:07:49 INFO     bot: Command prefix: n!
+2024-12-07 01:07:49 INFO     bot: Initializing services...
+2024-12-07 01:07:49 INFO     bot: AI providers initialized
+2024-12-07 01:07:49 INFO     bot: Database initialized
+2024-12-07 01:07:49 INFO     bot: Default permissions initialized
+2024-12-07 01:07:49 INFO     bot: Example feature initialized
+2024-12-07 01:07:49 INFO     bot: Loaded feature: example
+2024-12-07 01:07:49 INFO     bot: LLMHandler initialized
+2024-12-07 01:07:49 INFO     bot: LLM feature initialized
+2024-12-07 01:07:49 INFO     bot: Loaded feature: llm
+2024-12-07 01:07:49 INFO     bot: Summary feature initialized
+2024-12-07 01:07:49 INFO     bot: Loaded feature: summary
+2024-12-07 01:07:49 INFO     bot: Settings feature initialized
+2024-12-07 01:07:49 INFO     bot: Loaded feature: settings
+2024-12-07 01:07:49 INFO     bot: Blocklist feature initialized
+2024-12-07 01:07:49 INFO     bot: Loaded feature: blocklist
+2024-12-07 01:07:49 INFO     bot: Loaded feature: hot_reloader
+2024-12-07 01:07:52 INFO     bot: Logged in as Nous
+2024-12-07 01:07:52 INFO     bot: Serving 5 guilds

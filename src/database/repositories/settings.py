@@ -20,13 +20,17 @@ class SettingRepository(BaseRepository[Setting]):
         with db.get_session() as session:
             setting = (
                 session.query(Setting)
-                .filter_by(key=key, scope=SettingScope(scope), scope_id=scope_id)
+                .filter_by(
+                    key=key,
+                    scope=SettingScope(scope),
+                    scope_id=scope_id,
+                    category=SettingCategory(category),
+                )
                 .first()
             )
 
             if setting:
                 setting.value = value
-                setting.category = SettingCategory(category)
             else:
                 setting = Setting(
                     key=key,
@@ -41,13 +45,22 @@ class SettingRepository(BaseRepository[Setting]):
             return setting
 
     async def get_setting(
-        self, key: str, scope: str = "global", scope_id: Optional[int] = None
+        self,
+        key: str,
+        scope: str = "global",
+        scope_id: Optional[int] = None,
+        category: str = "general",
     ) -> Optional[Setting]:
         """Get a setting value"""
         with db.get_session() as session:
             return (
                 session.query(Setting)
-                .filter_by(key=key, scope=SettingScope(scope), scope_id=scope_id)
+                .filter_by(
+                    key=key,
+                    scope=SettingScope(scope),
+                    scope_id=scope_id,
+                    category=SettingCategory(category),
+                )
                 .first()
             )
 

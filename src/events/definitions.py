@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 from .types import EventType
+from pathlib import Path
 
 
 @dataclass
@@ -83,5 +84,37 @@ class DatabaseEvent(Event):
         self.operation = operation
         self.model = model
         self.data = data
+        self.success = success
+        self.error = error
+
+
+@dataclass
+class FileChangeEvent(Event):
+    """Event fired when a file in the src directory changes"""
+
+    file_path: Path
+    module_path: str
+    change_type: str  # 'modified', 'created', 'deleted'
+
+    def __init__(self, file_path: Path, module_path: str, change_type: str):
+        super().__init__(type=EventType.FILE_CHANGED)
+        self.file_path = file_path
+        self.module_path = module_path
+        self.change_type = change_type
+
+
+@dataclass
+class FeatureReloadEvent(Event):
+    """Event fired when a feature is reloaded"""
+
+    feature_name: str
+    success: bool
+    error: Optional[Exception] = None
+
+    def __init__(
+        self, feature_name: str, success: bool, error: Optional[Exception] = None
+    ):
+        super().__init__(type=EventType.FEATURE_RELOADED)
+        self.feature_name = feature_name
         self.success = success
         self.error = error

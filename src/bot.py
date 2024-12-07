@@ -69,6 +69,9 @@ class NousBot(commands.Bot):
         self.feature_manager = FeatureManager(self)
         await self.feature_manager.load_all_features()
 
+        # Initialize default blocklist settings
+        await self._initialize_blocklist_settings()
+
     async def _initialize_default_permissions(self):
         """Initialize default permissions for the bot"""
         try:
@@ -150,3 +153,56 @@ class NousBot(commands.Bot):
 
         # Call parent close method
         await super().close()
+
+    async def _initialize_blocklist_settings(self):
+        """Initialize default blocklist settings"""
+        default_blocklist_settings = {
+            "blocked_users": [],  # List of user IDs
+            "blocked_channels": [],  # List of channel IDs
+            "blocked_guilds": [],  # List of guild IDs
+        }
+
+        for key, default_value in default_blocklist_settings.items():
+            setting = await self.settings_repo.get_setting(
+                key=key, scope="global", category="blocklist"
+            )
+            if not setting:
+                await self.settings_repo.set_setting(
+                    key=key, value=default_value, scope="global", category="blocklist"
+                )
+
+    async def check_blocklist(self, ctx: commands.Context) -> bool:
+        """Check if the context is blocked"""
+        # Get blocklist settings
+        blocked_users = await self.settings_repo.get_setting(
+            key="blocked_users", scope="global", category="blocklist"
+        )
+        blocked_channels = await self.settings_repo.get_setting(
+            key="blocked_channels", scope="global", category="blocklist"
+        )
+        blocked_guilds = await self.settings_repo.get_setting(
+            key="blocked_guilds", scope="global", category="blocklist"
+        )
+
+        # Check if user, channel or guild is blocked
+        if blocked_users and ctx.author.id in blocked_users.value:
+            return False
+        if blocked_channels and ctx.channel.id in blocked_channels.value:
+            return False
+        if blocked_guilds and ctx.guild and ctx.guild.id in blocked_guilds.value:
+            return False
+
+        return True
+
+    async def process_commands(self, message):
+        """Override to add blocklist check"""
+        if message.author.bot:
+            return
+
+        ctx = await self.get_context(message)
+
+        # Check if context is blocked before processing command
+        if not await self.check_blocklist(ctx):
+            return
+
+        await self.invoke(ctx)

@@ -52,5 +52,9 @@ class EventType(Enum):
     # Database events
     DATABASE_OPERATION = auto()
 
+    # Hot reload events
+    FILE_CHANGED = auto()
+    FEATURE_RELOADED = auto()
+
     def __str__(self) -> str:
         return self.name.lower()

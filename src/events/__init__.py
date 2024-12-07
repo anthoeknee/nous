@@ -1,6 +1,14 @@
 from .bus import events
 from .types import EventHandler, EventPriority
-from .definitions import Event, MessageEvent, CommandEvent, ErrorEvent, DatabaseEvent
+from .definitions import (
+    Event,
+    MessageEvent,
+    CommandEvent,
+    ErrorEvent,
+    DatabaseEvent,
+    FileChangeEvent,
+    FeatureReloadEvent,
+)
 
 __all__ = [
     "events",
@@ -11,4 +19,6 @@ __all__ = [
     "CommandEvent",
     "ErrorEvent",
     "DatabaseEvent",
+    "FileChangeEvent",
+    "FeatureReloadEvent",
 ]

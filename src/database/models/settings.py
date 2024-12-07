@@ -14,6 +14,7 @@ class SettingScope(Enum):
 class SettingCategory(Enum):
     OWNER = "owner"
     GENERAL = "general"
+    BLOCKLIST = "blocklist"
 
 
 class Setting(BaseModel):
