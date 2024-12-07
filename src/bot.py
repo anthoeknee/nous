@@ -5,6 +5,8 @@ from src.database.manager import db
 from src.utils.logging import logger
 from src.events import events, ErrorEvent
 from src.feature_manager import FeatureManager
+from src.database.repositories.settings import SettingRepository
+from src.database.repositories.permissions import PermissionRepository
 
 settings = conf()
 
@@ -23,6 +25,9 @@ class NousBot(commands.Bot):
 
         self.db = db
         self.providers = {}
+        # Initialize repositories
+        self.settings_repo = SettingRepository()
+        self.permissions_repo = PermissionRepository()
 
     async def setup_hook(self):
         """Initialize bot services and load cogs"""
@@ -52,6 +57,10 @@ class NousBot(commands.Bot):
             # Load and create all database tables
             self.db.create_all()
             logger.info("Database initialized")
+
+            # Initialize default permissions if needed
+            await self._initialize_default_permissions()
+            logger.info("Default permissions initialized")
         except Exception as e:
             logger.error(f"Database initialization failed: {str(e)}")
             raise
@@ -59,6 +68,46 @@ class NousBot(commands.Bot):
         # Initialize feature manager and load features
         self.feature_manager = FeatureManager(self)
         await self.feature_manager.load_all_features()
+
+    async def _initialize_default_permissions(self):
+        """Initialize default permissions for the bot"""
+        try:
+            # Set up default global permissions
+            default_permissions = {
+                "manage_settings": False,  # Default to false for regular users
+                "view_settings": True,  # Allow viewing settings by default
+                "manage_permissions": False,  # Restrict permission management
+            }
+
+            # Set default permissions
+            for perm_name, allowed in default_permissions.items():
+                existing_perm = await self.permissions_repo.get_permission(
+                    name=perm_name, scope="global"
+                )
+                if not existing_perm:
+                    await self.permissions_repo.set_permission(
+                        name=perm_name, allowed=allowed, scope="global", priority=0
+                    )
+
+            # Set owner permissions
+            owner_permissions = {
+                "manage_settings": True,
+                "view_settings": True,
+                "manage_permissions": True,
+            }
+
+            for perm_name, allowed in owner_permissions.items():
+                await self.permissions_repo.set_permission(
+                    name=perm_name,
+                    allowed=allowed,
+                    scope="user",
+                    scope_id=self.owner_id,
+                    priority=100,  # Highest priority for owner
+                )
+
+        except Exception as e:
+            logger.error(f"Error initializing default permissions: {str(e)}")
+            raise
 
     async def on_ready(self):
         """Called when the bot is ready"""
