@@ -39,4 +39,4 @@ env/
 *.dump
 *.backup
 *.bak
-logs/
+*.log
