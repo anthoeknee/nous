@@ -1,6 +1,6 @@
 from typing import Optional
 from discord.ext import commands
-from src.database.repositories.permissions import PermissionRepository
+from src.storage.repositories.permissions import PermissionRepository
 
 
 async def has_permission(

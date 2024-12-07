@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     supabase_password: str
     supabase_service_role_secret: str
 
+    # Storage settings
+    use_memory_storage: bool = True
+    redis_url: Optional[str] = None
+    database_url: Optional[str] = None
+    default_storage_backend: str = "memory"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

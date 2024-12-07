@@ -262,3 +262,40 @@ class GroqProvider(BaseProvider):
             response = await client.post("/audio/translations", data=data, files=files)
             response.raise_for_status()
             return response.json()
+
+    async def moderate(
+        self,
+        input: Union[str, List[str]],
+        model: str = "llama-guard-3-8b",
+    ) -> Dict[str, Any]:
+        """
+        Check content against Groq's moderation model (llama-guard).
+        The model automatically detects 14 harmful categories (S1-S14).
+
+        Args:
+            input: String or list of strings to moderate
+            model: Model to use for moderation (default: llama-guard-3-8b)
+
+        Returns:
+            Dict containing moderation results
+        """
+        try:
+            # Convert single string to list for consistent handling
+            if isinstance(input, str):
+                input = [input]
+
+            # Prepare messages for each input string
+            messages = [{"role": "user", "content": text} for text in input]
+
+            # Use chat completion with llama-guard model
+            response = await self.chat_completion(
+                messages=messages,
+                model=model,
+                temperature=0.0,  # Use deterministic output for moderation
+            )
+
+            return response
+
+        except Exception as e:
+            logger.error(f"Error in moderation: {str(e)}")
+            raise

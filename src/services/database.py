@@ -1,9 +1,9 @@
 from typing import Optional, Type, TypeVar
 from sqlalchemy.orm import Session
 from src.services.base import BaseService
-from src.database.manager import db
-from src.database.models.base import BaseModel
-from src.database.repositories.base import BaseRepository
+from src.storage.manager import db
+from src.storage.models.base import BaseModel
+from src.storage.repositories.base import BaseRepository
 from src.utils.logging import logger
 
 T = TypeVar("T", bound=BaseModel)

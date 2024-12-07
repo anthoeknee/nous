@@ -1,15 +1,17 @@
 import discord
 from discord.ext import commands
+import asyncio
 from src.config import conf
-from src.database.manager import db
 from src.utils.logging import logger
-from src.events import events, ErrorEvent
 from src.feature_manager import FeatureManager
-from src.database.repositories.settings import SettingRepository
-from src.database.repositories.permissions import PermissionRepository
-from src.services.manager import ServiceManager
-from src.services.ai_provider import AIProviderService
-from src.services.database import DatabaseService
+from src.storage.manager import StorageManager
+from src.storage.interfaces import (
+    StorageScope,
+    StorageKey,
+    StorageValue,
+    StorageBackend,
+)
+import time
 
 settings = conf()
 
@@ -26,65 +28,80 @@ class NousBot(commands.Bot):
             owner_id=settings.discord_owner_id,
         )
 
-        self.db = db
-        self.services = ServiceManager()
-
-        # Initialize repositories
-        self.settings_repo = SettingRepository()
-        self.permissions_repo = PermissionRepository()
+        # Initialize storage manager
+        self.storage = StorageManager(settings)
+        self.state = None  # Will be initialized in setup_hook
 
     async def setup_hook(self):
-        """Initialize bot services and load cogs"""
-        logger.info("Initializing services...")
+        """Initialize bot services and load features"""
+        logger.info("Initializing bot...")
 
-        # Initialize services
+        # Initialize storage
         try:
-            # Register database service
-            self.services.register("database", DatabaseService())
-
-            # Register AI provider service
-            self.services.register("ai_provider", AIProviderService())
-
-            # Initialize all services
-            await self.services.initialize_all()
-
-            # Register repositories with database service
-            db_service = self.services.get("database", DatabaseService)
-            db_service.register_repository("settings", self.settings_repo)
-            db_service.register_repository("permissions", self.permissions_repo)
-
+            await self.storage.initialize()
+            # Use hybrid storage if available, fallback to database
+            if StorageBackend.HYBRID in self.storage.storages:
+                self.state = self.storage.get_storage(StorageBackend.HYBRID)
+            else:
+                self.state = self.storage.get_storage()
+            logger.info("Storage system initialized successfully")
         except Exception as e:
-            logger.error(f"Service initialization failed: {str(e)}")
+            logger.error(f"Failed to initialize storage: {e}")
             raise
 
         # Initialize feature manager and load features
         self.feature_manager = FeatureManager(self)
         await self.feature_manager.load_all_features()
 
-        # Initialize default blocklist settings
-        await self._initialize_blocklist_settings()
+        # Initialize default settings
+        await self._initialize_default_settings()
 
-    async def _initialize_default_permissions(self):
-        """Initialize default permissions for the bot"""
+        # Store bot start time
         try:
-            # Set up default global permissions
-            default_permissions = {
-                "manage_settings": False,  # Default to false for regular users
-                "view_settings": True,  # Allow viewing settings by default
-                "manage_permissions": False,  # Restrict permission management
-            }
+            await self.state.set(
+                StorageKey(
+                    name="bot_start_time", scope=StorageScope.GLOBAL, namespace="system"
+                ),
+                StorageValue(value=time.time()),
+            )
+        except Exception as e:
+            logger.error(f"Failed to store bot start time: {e}")
 
-            # Set default permissions
-            for perm_name, allowed in default_permissions.items():
-                existing_perm = await self.permissions_repo.get_permission(
-                    name=perm_name, scope="global"
-                )
-                if not existing_perm:
-                    await self.permissions_repo.set_permission(
-                        name=perm_name, allowed=allowed, scope="global", priority=0
+    async def _initialize_default_settings(self):
+        """Initialize default settings including permissions and blocklist"""
+        default_settings = {
+            "permissions": {
+                "manage_settings": False,
+                "view_settings": True,
+                "manage_permissions": False,
+            },
+            "blocklist": {
+                "blocked_users": [],
+                "blocked_channels": [],
+                "blocked_guilds": [],
+            },
+        }
+
+        for category, settings in default_settings.items():
+            for key, default_value in settings.items():
+                try:
+                    storage_key = StorageKey(
+                        name=key, scope=StorageScope.GLOBAL, namespace=category
                     )
 
-            # Set owner permissions
+                    # Only set if it doesn't exist
+                    try:
+                        await self.state.get(storage_key)
+                    except KeyError:
+                        await self.state.set(
+                            storage_key, StorageValue(value=default_value)
+                        )
+                        logger.debug(f"Initialized default setting: {category}.{key}")
+                except Exception as e:
+                    logger.error(f"Failed to initialize setting {category}.{key}: {e}")
+
+        # Set owner permissions
+        if self.owner_id:
             owner_permissions = {
                 "manage_settings": True,
                 "view_settings": True,
@@ -92,108 +109,89 @@ class NousBot(commands.Bot):
             }
 
             for perm_name, allowed in owner_permissions.items():
-                await self.permissions_repo.set_permission(
-                    name=perm_name,
-                    allowed=allowed,
-                    scope="user",
-                    scope_id=self.owner_id,
-                    priority=100,  # Highest priority for owner
-                )
-
-        except Exception as e:
-            logger.error(f"Error initializing default permissions: {str(e)}")
-            raise
-
-    async def on_ready(self):
-        """Called when the bot is ready"""
-        logger.info(f"Logged in as {self.user.name}")
-        logger.info(f"Serving {len(self.guilds)} guilds")
-
-        activity = (
-            discord.Game(name=settings.discord_activity)
-            if settings.discord_activity
-            else None
-        )
-        await self.change_presence(
-            status=discord.Status(settings.discord_status), activity=activity
-        )
-
-    async def on_command_error(self, ctx: commands.Context, error: Exception):
-        """Handle command errors"""
-        if isinstance(error, commands.CommandNotFound):
-            return
-
-        logger.error(f"Command error: {str(error)}")
-        await events.emit(
-            ErrorEvent(
-                error=error,
-                context={"command": ctx.command.name if ctx.command else None},
-            )
-        )
-
-        error_message = "An error occurred while executing the command."
-        if isinstance(error, commands.UserInputError):
-            error_message = str(error)
-
-        await ctx.send(error_message)
-
-    async def close(self):
-        """Cleanup when bot is shutting down"""
-        # Cleanup services
-        await self.services.cleanup_all()
-
-        # Call parent close method
-        await super().close()
-
-    async def _initialize_blocklist_settings(self):
-        """Initialize default blocklist settings"""
-        default_blocklist_settings = {
-            "blocked_users": [],  # List of user IDs
-            "blocked_channels": [],  # List of channel IDs
-            "blocked_guilds": [],  # List of guild IDs
-        }
-
-        for key, default_value in default_blocklist_settings.items():
-            setting = await self.settings_repo.get_setting(
-                key=key, scope="global", category="blocklist"
-            )
-            if not setting:
-                await self.settings_repo.set_setting(
-                    key=key, value=default_value, scope="global", category="blocklist"
-                )
+                try:
+                    await self.state.set(
+                        StorageKey(
+                            name=perm_name,
+                            scope=StorageScope.USER,
+                            scope_id=self.owner_id,
+                            namespace="permissions",
+                        ),
+                        StorageValue(value=allowed, metadata={"priority": 100}),
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to set owner permission {perm_name}: {e}")
 
     async def check_blocklist(self, ctx: commands.Context) -> bool:
         """Check if the context is blocked"""
-        # Get blocklist settings
-        blocked_users = await self.settings_repo.get_setting(
-            key="blocked_users", scope="global", category="blocklist"
-        )
-        blocked_channels = await self.settings_repo.get_setting(
-            key="blocked_channels", scope="global", category="blocklist"
-        )
-        blocked_guilds = await self.settings_repo.get_setting(
-            key="blocked_guilds", scope="global", category="blocklist"
-        )
+        try:
+            blocked_data = await asyncio.gather(
+                self.state.get(
+                    StorageKey(
+                        name="blocked_users",
+                        scope=StorageScope.GLOBAL,
+                        namespace="blocklist",
+                    )
+                ),
+                self.state.get(
+                    StorageKey(
+                        name="blocked_channels",
+                        scope=StorageScope.GLOBAL,
+                        namespace="blocklist",
+                    )
+                ),
+                self.state.get(
+                    StorageKey(
+                        name="blocked_guilds",
+                        scope=StorageScope.GLOBAL,
+                        namespace="blocklist",
+                    )
+                ),
+            )
 
-        # Check if user, channel or guild is blocked
-        if blocked_users and ctx.author.id in blocked_users.value:
-            return False
-        if blocked_channels and ctx.channel.id in blocked_channels.value:
-            return False
-        if blocked_guilds and ctx.guild and ctx.guild.id in blocked_guilds.value:
-            return False
+            blocked_users, blocked_channels, blocked_guilds = [
+                d.value for d in blocked_data
+            ]
 
-        return True
+            if ctx.author.id in blocked_users:
+                return False
+            if ctx.channel.id in blocked_channels:
+                return False
+            if ctx.guild and ctx.guild.id in blocked_guilds:
+                return False
+
+            return True
+        except Exception as e:
+            logger.error(f"Error checking blocklist: {e}")
+            return True  # Allow by default if there's an error
 
     async def process_commands(self, message):
-        """Override to add blocklist check"""
         if message.author.bot:
             return
 
         ctx = await self.get_context(message)
+        try:
+            if not await self.check_blocklist(ctx):
+                return
+            await self.invoke(ctx)
+        except Exception as e:
+            logger.error(f"Error processing command: {e}")
 
-        # Check if context is blocked before processing command
-        if not await self.check_blocklist(ctx):
-            return
-
-        await self.invoke(ctx)
+    async def close(self):
+        """Cleanup when bot is shutting down"""
+        try:
+            await self.feature_manager.unload_all_features()
+            # Store shutdown time
+            if self.state:
+                await self.state.set(
+                    StorageKey(
+                        name="bot_shutdown_time",
+                        scope=StorageScope.GLOBAL,
+                        namespace="system",
+                    ),
+                    StorageValue(value=time.time()),
+                )
+        except Exception as e:
+            logger.error(f"Error during shutdown: {e}")
+        finally:
+            await super().close()

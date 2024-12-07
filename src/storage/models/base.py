@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, DateTime
-from src.database.manager import Base
+from src.storage.manager import Base
 
 
 class BaseModel(Base):
