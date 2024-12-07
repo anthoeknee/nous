@@ -19,6 +19,26 @@ class HybridStorageService(BaseStorageService):
         self.database = database_storage
         self._subscribers: Dict[str, List[asyncio.Queue]] = defaultdict(list)
 
+    async def initialize(self):
+        """Initialize all storage backends"""
+        init_tasks = []
+
+        if self.database:
+            init_tasks.append(self.database.initialize())
+
+        if self.redis:
+            if hasattr(self.redis, "initialize"):
+                init_tasks.append(self.redis.initialize())
+
+        if self.memory:
+            if hasattr(self.memory, "initialize"):
+                init_tasks.append(self.memory.initialize())
+
+        if init_tasks:
+            await asyncio.gather(*init_tasks)
+
+        return self
+
     async def get(self, key: StorageKey) -> StorageValue:
         """Try to get value from fastest to slowest storage"""
         errors = []

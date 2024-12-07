@@ -1,8 +1,8 @@
 from discord.ext import commands
 from discord import app_commands
 from src.utils.logging import logger
-from src.database.repositories.settings import SettingRepository
-from src.database.repositories.permissions import PermissionRepository
+from src.storage.repositories.settings import SettingRepository
+from src.storage.repositories.permissions import PermissionRepository
 from src.utils.permissions import has_permission
 from typing import Optional
 

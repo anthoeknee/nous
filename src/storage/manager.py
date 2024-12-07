@@ -43,7 +43,9 @@ class StorageManager:
         # Initialize hybrid storage if multiple backends are available
         if len(self.storages) > 1:
             self.storages[StorageBackend.HYBRID] = HybridStorageService(
-                storages=list(self.storages.values())
+                memory_storage=self.storages.get(StorageBackend.MEMORY),
+                redis_storage=self.storages.get(StorageBackend.REDIS),
+                database_storage=self.storages.get(StorageBackend.DATABASE),
             )
 
         self.default_backend = StorageBackend(settings.default_storage_backend)

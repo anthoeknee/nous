@@ -2,7 +2,7 @@ from typing import Optional, List
 from src.storage.models.settings import Setting, SettingScope, SettingCategory
 from .base import BaseRepository
 from src.storage.interfaces import StorageKey, StorageScope
-from src.storage.manager import storage, db
+from src.storage.manager import storage
 
 
 class SettingRepository(BaseRepository[Setting]):
@@ -42,7 +42,7 @@ class SettingRepository(BaseRepository[Setting]):
             category=category,
         )
         try:
-            value = await storage.get(storage_key)
+            value = await storage.get_storage().get(storage_key)
             return self._dict_to_model(value.value)
         except KeyError:
             return None
@@ -51,9 +51,16 @@ class SettingRepository(BaseRepository[Setting]):
         self, scope: str = "global", scope_id: Optional[int] = None
     ) -> List[Setting]:
         """Get all settings for a scope"""
-        with db.get_session() as session:
-            return (
-                session.query(Setting)
-                .filter_by(scope=SettingScope(scope), scope_id=scope_id)
-                .all()
-            )
+        storage = storage.get_storage()
+        keys = await storage.list(StorageScope(scope), scope_id)
+        settings = []
+
+        for key in keys:
+            if key.namespace == self.namespace:
+                try:
+                    value = await storage.get(key)
+                    settings.append(self._dict_to_model(value.value))
+                except KeyError:
+                    continue
+
+        return settings

@@ -4,7 +4,7 @@ from watchdog.events import FileSystemEventHandler
 from discord.ext import commands, tasks
 from pathlib import Path
 from src.utils.logging import logger
-from src.events import events, FileChangeEvent, FeatureReloadEvent
+from src.storage.events import events, FileChangeEvent, FeatureReloadEvent
 import importlib
 import sys
 import time
