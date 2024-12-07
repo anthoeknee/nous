@@ -95,3 +95,13 @@ class FeatureManager:
             for d in self.features_path.iterdir()
             if d.is_dir() and not d.name.startswith("_")
         ]
+
+    async def unload_all_features(self) -> None:
+        """Unload all currently loaded features"""
+        for feature_name in (
+            self.loaded_features.copy()
+        ):  # Use copy to avoid modifying list during iteration
+            try:
+                await self.unload_feature(feature_name)
+            except Exception as e:
+                logger.error(f"Failed to unload feature '{feature_name}': {str(e)}")

@@ -3,15 +3,38 @@ from src.utils.providers import ProviderFactory
 from .memory.short_term import ShortTermMemory
 from src.utils.logging import logger
 from typing import Optional, List
+from .prompts.manager import PromptManager, PromptTemplate
+import asyncio
 
 
 class LLMHandler:
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.memory = ShortTermMemory()
+        self.prompt_manager = PromptManager()
         self._reconnect_attempts = 0
         self._max_reconnect_attempts = 3
-        logger.info("LLMHandler initialized")
+
+        # Initialize default system prompt
+        asyncio.create_task(self._init_default_prompt())
+
+    async def _init_default_prompt(self):
+        default_prompt = PromptTemplate(
+            template="""You are ${bot_name}, a helpful AI assistant in a Discord chat.
+Current time: ${current_time}
+Version: ${version}
+
+${channel_specific}
+
+Be concise and friendly in your responses.
+If an image is provided, analyze it thoroughly.
+""",
+            conditions={
+                "message.channel.is_nsfw()": "Content warning: This is an NSFW channel. Adjust responses accordingly.",
+                "message.guild is None": "This is a direct message conversation. Provide more personal assistance.",
+            },
+        )
+        await self.prompt_manager.save_prompt("default_system", default_prompt)
 
     async def _ensure_provider(self):
         """Create a new provider instance for each request"""
@@ -60,14 +83,40 @@ class LLMHandler:
 
                     logger.info(f"Processing message in channel {message.channel.id}")
 
+                    # Get conversation history
+                    conversation_history = await self.memory.get_context(
+                        str(message.channel.id)
+                    )
+
+                    # Prepare system prompt with context
+                    system_prompt = await self.prompt_manager.render_prompt(
+                        "default_system",
+                        variables={
+                            "channel_specific": f"Channel: #{message.channel.name}"
+                            if message.guild
+                            else "DM Channel",
+                            "guild_name": message.guild.name
+                            if message.guild
+                            else "Direct Message",
+                        },
+                        context={"message": message},
+                    )
+
                     # Prepare messages for the LLM
                     messages = [
                         {
                             "role": "system",
-                            "content": "You are a helpful AI assistant in a Discord chat. Be concise and friendly in your responses. If an image is provided, analyze it thoroughly.",
-                        },
-                        {"role": "user", "content": content},
+                            "content": system_prompt
+                            or "You are a helpful AI assistant.",
+                        }
                     ]
+
+                    # Add conversation history
+                    for msg in conversation_history:
+                        messages.append(msg)
+
+                    # Add current message
+                    messages.append({"role": "user", "content": content})
 
                     logger.info("Sending request to Groq API")
                     # Get response from LLM with multimodal support
@@ -82,6 +131,14 @@ class LLMHandler:
                     assistant_message = response["choices"][0]["message"]
 
                     logger.info("Successfully processed message")
+                    # Store the interaction in memory
+                    await self.memory.add_message(
+                        str(message.channel.id), {"role": "user", "content": content}
+                    )
+                    await self.memory.add_message(
+                        str(message.channel.id), assistant_message
+                    )
+
                     # Send the response
                     await message.reply(assistant_message["content"])
 

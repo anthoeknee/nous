@@ -1,44 +1,47 @@
-2024-12-07 08:50:02 INFO     bot: Starting Nexus Bot...
-2024-12-07 08:50:02 INFO     bot: Command prefix: n!
-2024-12-07 08:50:03 INFO     bot: Initializing bot...
-2024-12-07 08:50:03 INFO     bot: Storage system initialized successfully
-2024-12-07 08:50:03 INFO     bot: Example feature initialized
-2024-12-07 08:50:03 INFO     bot: Loaded feature: example
-2024-12-07 08:50:03 INFO     bot: LLMHandler initialized
-2024-12-07 08:50:03 INFO     bot: LLM feature initialized
-2024-12-07 08:50:03 INFO     bot: Loaded feature: llm
-2024-12-07 08:50:03 INFO     bot: Summary feature initialized
-2024-12-07 08:50:03 INFO     bot: Loaded feature: summary
-2024-12-07 08:50:03 INFO     bot: Settings feature initialized
-2024-12-07 08:50:03 INFO     bot: Loaded feature: settings
-2024-12-07 08:50:03 INFO     bot: Blocklist feature initialized
-2024-12-07 08:50:03 INFO     bot: Loaded feature: blocklist
-2024-12-07 08:50:03 INFO     bot: Loaded feature: hot_reloader
-2024-12-07 09:59:55 INFO     bot: Handle Message - Image Attachments:
-2024-12-07 09:59:55 INFO     bot: Number of image attachments: 1
-2024-12-07 09:59:55 INFO     bot: Image 0:
-2024-12-07 09:59:55 INFO     bot:   Type: <class 'bytes'>
-2024-12-07 09:59:55 INFO     bot:   Length: 120472 bytes
-2024-12-07 09:59:55 INFO     bot: Creating new Groq provider
-2024-12-07 09:59:55 INFO     bot: Processing message in channel 866447931388198962
-2024-12-07 09:59:55 INFO     bot: Sending request to Groq API
-2024-12-07 09:59:55 WARNING  bot: Attempt 1 failed: Client error '400 Bad Request' for url 'https://api.groq.com/openai/v1/chat/completions'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
-2024-12-07 09:59:55 INFO     bot: Creating new Groq provider
-2024-12-07 09:59:55 INFO     bot: Processing message in channel 866447931388198962
-2024-12-07 09:59:55 INFO     bot: Sending request to Groq API
-2024-12-07 09:59:56 WARNING  bot: Attempt 2 failed: Client error '400 Bad Request' for url 'https://api.groq.com/openai/v1/chat/completions'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
-2024-12-07 09:59:56 INFO     bot: Creating new Groq provider
-2024-12-07 09:59:56 INFO     bot: Processing message in channel 866447931388198962
-2024-12-07 09:59:56 INFO     bot: Sending request to Groq API
-2024-12-07 09:59:56 WARNING  bot: Attempt 3 failed: Client error '400 Bad Request' for url 'https://api.groq.com/openai/v1/chat/completions'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
-2024-12-07 09:59:56 ERROR    bot: Error in handle_message: Client error '400 Bad Request' for url 'https://api.groq.com/openai/v1/chat/completions'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
-2024-12-07 10:02:13 INFO     bot: Handle Message - Image Attachments:
-2024-12-07 10:02:13 INFO     bot: No image attachments received
-2024-12-07 10:02:13 INFO     bot: Creating new Groq provider
-2024-12-07 10:02:13 INFO     bot: Processing message in channel 866447931388198962
-2024-12-07 10:02:13 INFO     bot: Sending request to Groq API
-2024-12-07 10:02:14 INFO     bot: Successfully processed message
+2024-12-07 10:50:21 INFO     bot: Starting Nexus Bot...
+2024-12-07 10:50:21 INFO     bot: Command prefix: n!
+2024-12-07 10:50:22 INFO     bot: Initializing bot...
+2024-12-07 10:50:22 INFO     bot: Storage system initialized successfully
+2024-12-07 10:50:22 INFO     bot: Example feature initialized
+2024-12-07 10:50:22 INFO     bot: Loaded feature: example
+2024-12-07 10:50:22 INFO     bot: LLMHandler initialized
+2024-12-07 10:50:22 INFO     bot: LLM feature initialized
+2024-12-07 10:50:22 INFO     bot: Loaded feature: llm
+2024-12-07 10:50:22 INFO     bot: Summary feature initialized
+2024-12-07 10:50:22 INFO     bot: Loaded feature: summary
+2024-12-07 10:50:22 INFO     bot: Settings feature initialized
+2024-12-07 10:50:22 INFO     bot: Loaded feature: settings
+2024-12-07 10:50:22 INFO     bot: Blocklist feature initialized
+2024-12-07 10:50:22 INFO     bot: Loaded feature: blocklist
+2024-12-07 10:50:22 INFO     bot: Loaded feature: hot_reloader
+2024-12-07 10:50:26 INFO     bot: Handle Message - Image Attachments:
+2024-12-07 10:50:26 INFO     bot: No image attachments received
+2024-12-07 10:50:26 INFO     bot: Creating new Groq provider
+2024-12-07 10:50:26 INFO     bot: Processing message in channel 1255700504886116457
+2024-12-07 10:50:26 INFO     bot: Sending request to Groq API
+2024-12-07 10:50:26 INFO     bot: Successfully processed message
+2024-12-07 10:50:29 INFO     bot: Handle Message - Image Attachments:
+2024-12-07 10:50:29 INFO     bot: No image attachments received
+2024-12-07 10:50:29 INFO     bot: Creating new Groq provider
+2024-12-07 10:50:29 INFO     bot: Processing message in channel 1255700504886116457
+2024-12-07 10:50:29 INFO     bot: Sending request to Groq API
+2024-12-07 10:50:30 INFO     bot: Successfully processed message
+2024-12-07 10:56:03 INFO     bot: Attempting to reload feature: llm
+2024-12-07 10:56:03 INFO     bot: Unloaded feature: llm
+2024-12-07 10:56:03 INFO     bot: LLMHandler initialized
+2024-12-07 10:56:03 INFO     bot: LLM feature initialized
+2024-12-07 10:56:03 INFO     bot: Loaded feature: llm
+2024-12-07 10:56:03 INFO     bot: Feature 'llm' successfully reload
+2024-12-07 10:56:08 INFO     bot: Attempting to reload feature: llm
+2024-12-07 10:56:08 INFO     bot: Unloaded feature: llm
+2024-12-07 10:56:08 INFO     bot: LLMHandler initialized
+2024-12-07 10:56:08 INFO     bot: LLM feature initialized
+2024-12-07 10:56:08 INFO     bot: Loaded feature: llm
+2024-12-07 10:56:08 INFO     bot: Feature 'llm' successfully reload
+2024-12-07 10:56:53 INFO     bot: Unloaded feature: example
+2024-12-07 10:56:53 INFO     bot: Unloaded feature: summary
+2024-12-07 10:56:53 INFO     bot: Unloaded feature: settings
+2024-12-07 10:56:53 INFO     bot: Unloaded feature: blocklist
+2024-12-07 10:56:53 INFO     bot: Unloaded feature: hot_reloader
+2024-12-07 10:56:53 INFO     bot: Unloaded feature: llm
+2024-12-07 10:56:53 INFO     bot: Bot shutdown by user
