@@ -1,96 +1,74 @@
 from typing import Dict, Any, Optional
-from datetime import datetime
-from string import Template
+from dataclasses import dataclass
+from .templating import TemplateEngine
 from src.storage.interfaces import StorageKey, StorageScope, StorageValue
 from src.storage.manager import storage
 
 
+@dataclass
 class PromptTemplate:
-    def __init__(self, template: str, conditions: Optional[Dict[str, str]] = None):
-        self.template = template
-        self.conditions = conditions or {}
+    template: str
+    conditions: Dict[str, str] = None
+    description: str = ""
+
+    def to_dict(self):
+        return {
+            "template": self.template,
+            "conditions": self.conditions,
+            "description": self.description,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(**data)
 
 
 class PromptManager:
     def __init__(self):
-        self.namespace = "llm_prompts"
-        self._default_variables = {
-            "current_time": lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "bot_name": lambda: "Assistant",
-            "version": lambda: "1.0",
-        }
+        self.engine = TemplateEngine()
+        self.namespace = "prompt_templates"
 
-    def _make_key(self, prompt_name: str) -> StorageKey:
+    def _make_key(self, template_name: str) -> StorageKey:
         return StorageKey(
-            name=f"prompt_{prompt_name}",
+            name=f"template_{template_name}",
             scope=StorageScope.GLOBAL,
+            scope_id=0,
             namespace=self.namespace,
         )
 
     async def save_prompt(self, name: str, template: PromptTemplate) -> None:
-        """Save a prompt template to storage"""
+        """Save a prompt template to storage."""
         key = self._make_key(name)
-        value = {"template": template.template, "conditions": template.conditions}
-        await storage.get_storage().set(key, StorageValue(value=value))
+        await storage.get_storage().set(key, StorageValue(value=template.to_dict()))
 
     async def get_prompt(self, name: str) -> Optional[PromptTemplate]:
-        """Retrieve a prompt template from storage"""
+        """Retrieve a prompt template from storage."""
+        key = self._make_key(name)
         try:
-            key = self._make_key(name)
             value = await storage.get_storage().get(key)
-            data = value.value
-            return PromptTemplate(data["template"], data["conditions"])
+            return PromptTemplate.from_dict(value.value)
         except KeyError:
             return None
-
-    def evaluate_condition(self, condition: str, context: Dict[str, Any]) -> bool:
-        """Safely evaluate a condition string with given context"""
-        try:
-            # Create a safe evaluation environment with context variables
-            env = {**context}
-            return eval(condition, {"__builtins__": {}}, env)
-        except Exception:
-            return False
 
     async def render_prompt(
         self,
         name: str,
-        variables: Optional[Dict[str, Any]] = None,
+        variables: Dict[str, Any],
         context: Optional[Dict[str, Any]] = None,
     ) -> Optional[str]:
-        """Render a prompt with variables and conditions"""
+        """Render a prompt template with given variables and context."""
         template = await self.get_prompt(name)
         if not template:
             return None
 
-        # Prepare variables
-        vars_dict = {}
+        # Add conditional content based on conditions
+        if template.conditions:
+            for condition, content in template.conditions.items():
+                template_str = f"{template.template}\n{{% if {condition} %}}\n{content}\n{{% endif %}}"
+                template = PromptTemplate(template=template_str)
 
-        # Add default variables
-        for key, func in self._default_variables.items():
-            if callable(func):
-                vars_dict[key] = func()
-            else:
-                vars_dict[key] = func
+        return self.engine.render(template.template, variables, context)
 
-        # Add custom variables
-        if variables:
-            vars_dict.update(variables)
-
-        # Check conditions if they exist and context is provided
-        if template.conditions and context:
-            for condition, sub_template in template.conditions.items():
-                if self.evaluate_condition(condition, context):
-                    template.template = sub_template
-                    break
-
-        # Render the template
-        try:
-            return Template(template.template).safe_substitute(vars_dict)
-        except Exception as e:
-            print(f"Error rendering prompt: {e}")
-            return None
-
-    def register_variable(self, name: str, value: Any) -> None:
-        """Register a new default variable or function"""
-        self._default_variables[name] = value
+    def add_function(self, name: str, func: callable):
+        """Add a custom function to the template engine."""
+        self.engine.add_function(name, func)

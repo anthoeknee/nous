@@ -5,6 +5,7 @@ from src.utils.logging import logger
 from typing import Optional, List
 from .prompts.manager import PromptManager, PromptTemplate
 import asyncio
+from .prompts.default_prompts import DEFAULT_SYSTEM_PROMPT
 
 
 class LLMHandler:
@@ -19,22 +20,13 @@ class LLMHandler:
         asyncio.create_task(self._init_default_prompt())
 
     async def _init_default_prompt(self):
-        default_prompt = PromptTemplate(
-            template="""You are ${bot_name}, a helpful AI assistant in a Discord chat.
-Current time: ${current_time}
-Version: ${version}
-
-${channel_specific}
-
-Be concise and friendly in your responses.
-If an image is provided, analyze it thoroughly.
-""",
-            conditions={
-                "message.channel.is_nsfw()": "Content warning: This is an NSFW channel. Adjust responses accordingly.",
-                "message.guild is None": "This is a direct message conversation. Provide more personal assistance.",
-            },
+        # Add any custom functions needed by your prompts
+        self.prompt_manager.add_function(
+            "get_member_count", lambda guild: len(guild.members) if guild else 0
         )
-        await self.prompt_manager.save_prompt("default_system", default_prompt)
+
+        # Save the default prompt
+        await self.prompt_manager.save_prompt("default_system", DEFAULT_SYSTEM_PROMPT)
 
     async def _ensure_provider(self):
         """Create a new provider instance for each request"""
