@@ -2,7 +2,10 @@ import base64
 import httpx
 from typing import Any, Dict, List, Optional, Union, BinaryIO
 from .base import BaseProvider
-import os
+import logging
+import json
+
+logger = logging.getLogger(__name__)
 
 
 class GroqProvider(BaseProvider):
@@ -25,76 +28,148 @@ class GroqProvider(BaseProvider):
         with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode("utf-8")
 
-    def prepare_image_message(
-        self, image_input: Union[str, Dict[str, str]]
-    ) -> Dict[str, Any]:
-        """Prepare image message content based on input type."""
-        if isinstance(image_input, str):
-            # If input is a local file path, encode it
-            if image_input.startswith(("http://", "https://")):
-                return {"type": "image_url", "image_url": {"url": image_input}}
-            else:
-                base64_image = self.encode_image(image_input)
-                return {
-                    "type": "image_url",
-                    "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
-                }
-        return image_input  # Already formatted image dict
+    def prepare_multimodal_content(
+        self,
+        content: Union[str, List[Dict[str, Any]]],
+        multimodal_input: Optional[List[Union[str, bytes]]] = None,
+        model: str = "llama-3.3-70b-versatile",
+    ) -> Union[str, List[Dict[str, Any]]]:
+        """
+        Prepare multimodal content, ensuring compatibility with Groq's API.
+        """
+        # Extremely verbose logging
+        logger.info("=" * 50)
+        logger.info("MULTIMODAL CONTENT PREPARATION")
+        logger.info("=" * 50)
+
+        # Validate inputs
+        if multimodal_input is None:
+            logger.warning("No multimodal input provided")
+            return content if isinstance(content, str) else content[0]["text"]
+
+        # Validate each image
+        valid_images = []
+        for i, img in enumerate(multimodal_input):
+            try:
+                # Validate image is bytes and has content
+                if not isinstance(img, bytes):
+                    logger.error(f"Image {i} is not bytes type: {type(img)}")
+                    continue
+
+                if len(img) == 0:
+                    logger.error(f"Image {i} is empty")
+                    continue
+
+                # Attempt base64 encoding
+                try:
+                    base64_image = base64.b64encode(img).decode("utf-8")
+                    valid_images.append(
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64_image}"
+                            },
+                        }
+                    )
+                    logger.info(f"Successfully processed image {i}")
+                except Exception as encode_err:
+                    logger.error(
+                        f"Base64 encoding failed for image {i}: {str(encode_err)}"
+                    )
+
+            except Exception as e:
+                logger.error(f"Error processing image {i}: {str(e)}")
+
+        # Prepare base content
+        if isinstance(content, str):
+            base_content = [{"type": "text", "text": content}]
+        elif isinstance(content, list):
+            base_content = content
+        else:
+            base_content = [{"type": "text", "text": str(content)}]
+
+        # Combine base content with images
+        multimodal_content = base_content + valid_images
+
+        logger.info("Final multimodal content structure:")
+        logger.info(f"  Base content items: {len(base_content)}")
+        logger.info(f"  Image items: {len(valid_images)}")
+        logger.info(f"  Total items: {len(multimodal_content)}")
+
+        # Return multimodal content for vision models
+        return multimodal_content
 
     async def chat_completion(
         self,
         messages: List[Dict[str, Any]],
         model: str = "llama-3.3-70b-versatile",
         temperature: float = 1.0,
-        tools: Optional[List[Dict[str, Any]]] = None,
-        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+        max_tokens: Optional[int] = None,
+        multimodal_input: Optional[List[Union[str, bytes]]] = None,
         **kwargs,
     ) -> Dict[str, Any]:
         """
-        Create a chat completion with Groq's API, supporting vision capabilities.
-
-        Args:
-            messages: List of message dictionaries. For vision, content should be a list of
-                     text and image components
-            model: Model ID to use (default: llama-3.2-11b-vision-preview)
-            temperature: Sampling temperature (0-2)
-            tools: Optional list of tools/functions the model can use
-            tool_choice: Controls which tool is called by the model
-            **kwargs: Additional parameters to pass to the API
+        Create a chat completion with Groq's API, supporting multimodal input.
         """
-        # Process messages to handle image inputs
-        processed_messages = []
-        for message in messages:
-            if isinstance(message["content"], list):
-                # Process each content item in the list
-                processed_content = []
-                for item in message["content"]:
-                    if isinstance(item, dict) and item.get("type") == "image_url":
-                        processed_content.append(
-                            self.prepare_image_message(item["image_url"]["url"])
-                        )
-                    else:
-                        processed_content.append(item)
-                processed_message = {**message, "content": processed_content}
-            else:
-                processed_message = message
-            processed_messages.append(processed_message)
+        try:
+            # Log input details with more verbosity
+            logger.info("Chat Completion Request:")
+            logger.info(f"Model: {model}")
+            logger.info(f"Number of messages: {len(messages)}")
+            logger.info(
+                f"Multimodal input count: {len(multimodal_input) if multimodal_input else 0}"
+            )
 
-        payload = {
-            "model": model,
-            "messages": processed_messages,
-            "temperature": temperature,
-            **kwargs,
-        }
+            # Modify the last message to support multimodal content
+            if messages and multimodal_input:
+                last_message = messages[-1]
+                last_message["content"] = self.prepare_multimodal_content(
+                    last_message.get("content", ""), multimodal_input, model=model
+                )
 
-        if tools:
-            payload["tools"] = tools
-            payload["tool_choice"] = tool_choice or "auto"
+                # Log the modified content in detail
+                logger.info("Modified message content:")
+                logger.info(json.dumps(last_message["content"], indent=2))
 
-        async with self.client as client:
-            response = await client.post("/chat/completions", json=payload)
-            response.raise_for_status()
-            return response.json()
+            # Prepare payload with exact API specification
+            payload = {
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+            }
+
+            # Add optional parameters
+            if max_tokens is not None:
+                payload["max_tokens"] = max_tokens
+
+            # Add any additional kwargs
+            payload.update(kwargs)
+
+            # Log full payload
+            logger.info("Full API Payload:")
+            logger.info(json.dumps(payload, indent=2))
+
+            async with self.client as client:
+                response = await client.post(
+                    "/chat/completions",
+                    json=payload,
+                    headers={"Content-Type": "application/json"},
+                )
+
+                # Log raw response
+                logger.info("Raw API Response:")
+                logger.info(response.text)
+
+                response.raise_for_status()
+                return response.json()
+
+        except httpx.HTTPStatusError as http_err:
+            logger.error(f"HTTP error occurred: {http_err}")
+            logger.error(f"Response content: {http_err.response.text}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error in chat_completion: {str(e)}")
+            raise
 
     async def close(self):
         """Close the HTTP client session."""

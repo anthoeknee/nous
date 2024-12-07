@@ -1,0 +1,12 @@
+2024-12-06 19:31:11 INFO     bot: Starting Nexus Bot...
+2024-12-06 19:31:11 INFO     bot: Command prefix: n!
+2024-12-06 19:31:12 INFO     bot: Initializing services...
+2024-12-06 19:31:12 INFO     bot: AI providers initialized
+2024-12-06 19:31:12 INFO     bot: Database initialized
+2024-12-06 19:31:12 INFO     bot: Example feature initialized
+2024-12-06 19:31:12 INFO     bot: Loaded feature: example
+2024-12-06 19:31:12 INFO     bot: LLMHandler initialized
+2024-12-06 19:31:12 INFO     bot: LLM feature initialized
+2024-12-06 19:31:12 INFO     bot: Loaded feature: llm
+2024-12-06 19:31:15 INFO     bot: Logged in as Nous
+2024-12-06 19:31:15 INFO     bot: Serving 5 guilds

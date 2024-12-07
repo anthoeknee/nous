@@ -11,9 +11,20 @@ class ShortTermMemory:
         self.memories: Dict[str, Deque[Tuple[datetime, dict]]] = {}
 
     def add_message(self, channel_id: str, message: dict) -> None:
-        """Add a message to the memory for a specific channel."""
+        """Enhanced to handle multimodal messages"""
         if channel_id not in self.memories:
             self.memories[channel_id] = deque(maxlen=self.capacity)
+
+        # Special handling for multimodal messages
+        if isinstance(message.get("content"), list):
+            # Simplify multimodal content for memory storage
+            simplified_content = " ".join(
+                [
+                    item["text"] if item["type"] == "text" else "[Image]"
+                    for item in message["content"]
+                ]
+            )
+            message = {**message, "content": simplified_content}
 
         self.memories[channel_id].append((datetime.now(), message))
         self._cleanup_expired(channel_id)

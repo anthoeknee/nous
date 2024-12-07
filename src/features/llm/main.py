@@ -2,6 +2,7 @@ from discord import Message
 from src.utils.providers import ProviderFactory
 from .memory.short_term import ShortTermMemory
 from src.utils.logging import logger
+from typing import Optional, List
 
 
 class LLMHandler:
@@ -24,9 +25,25 @@ class LLMHandler:
                 raise Exception("Failed to connect after multiple attempts")
             return None
 
-    async def handle_message(self, message: Message, content: str):
+    async def handle_message(
+        self,
+        message: Message,
+        content: str,
+        image_attachments: Optional[List[bytes]] = None,
+    ):
         """Handle an incoming message that requires an LLM response."""
         try:
+            # Extensive logging for image attachments
+            logger.info("Handle Message - Image Attachments:")
+            if image_attachments:
+                logger.info(f"Number of image attachments: {len(image_attachments)}")
+                for i, img in enumerate(image_attachments):
+                    logger.info(f"Image {i}:")
+                    logger.info(f"  Type: {type(img)}")
+                    logger.info(f"  Length: {len(img)} bytes")
+            else:
+                logger.info("No image attachments received")
+
             # Reset reconnect attempts
             self._reconnect_attempts = 0
 
@@ -43,37 +60,26 @@ class LLMHandler:
 
                     logger.info(f"Processing message in channel {message.channel.id}")
 
-                    # Get conversation context
-                    context = self.memory.get_context(str(message.channel.id))
-
                     # Prepare messages for the LLM
                     messages = [
                         {
                             "role": "system",
-                            "content": "You are a helpful AI assistant in a Discord chat. Be concise and friendly in your responses.",
-                        }
+                            "content": "You are a helpful AI assistant in a Discord chat. Be concise and friendly in your responses. If an image is provided, analyze it thoroughly.",
+                        },
+                        {"role": "user", "content": content},
                     ]
 
-                    # Add context messages
-                    messages.extend(context)
-
-                    # Add the current message
-                    messages.append({"role": "user", "content": content})
-
                     logger.info("Sending request to Groq API")
-                    # Get response from LLM
+                    # Get response from LLM with multimodal support
                     response = await provider.chat_completion(
-                        messages=messages, temperature=0.7
+                        messages=messages,
+                        temperature=0.7,
+                        multimodal_input=image_attachments,
+                        model="llama-3.3-70b-versatile",  # Specific vision model
                     )
 
                     # Extract the response content
                     assistant_message = response["choices"][0]["message"]
-
-                    # Store the interaction in memory
-                    self.memory.add_message(
-                        str(message.channel.id), {"role": "user", "content": content}
-                    )
-                    self.memory.add_message(str(message.channel.id), assistant_message)
 
                     logger.info("Successfully processed message")
                     # Send the response
@@ -103,14 +109,4 @@ class LLMHandler:
         except Exception as e:
             error_msg = str(e)
             logger.error(f"Error in handle_message: {error_msg}")
-
-            if "model_not_found" in error_msg.lower():
-                await message.reply(
-                    "Invalid model configuration. Please check the model name."
-                )
-            elif "Cannot reopen" in error_msg or "connection" in error_msg.lower():
-                await message.reply(
-                    "Service connection failed. Please try again in a few moments."
-                )
-            else:
-                await message.reply(f"Sorry, I encountered an error: {error_msg}")
+            await message.reply(f"Sorry, I encountered an error: {error_msg}")
