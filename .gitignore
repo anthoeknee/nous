@@ -34,6 +34,7 @@ env/
 *.mysql
 *.db-shm
 *.db-wal
+.cursorrules
 
 # Database backups
 *.dump
