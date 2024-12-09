@@ -1,22 +1,22 @@
-2024-12-08 16:40:47 INFO     bot: Starting Nexus Bot...
-2024-12-08 16:40:47 INFO     bot: Command prefix: n!
-2024-12-08 16:40:47 INFO     bot: Connecting to Discord...
-2024-12-08 16:40:48 INFO     bot: Initializing bot...
-2024-12-08 16:40:48 INFO     bot: Storage system initialized successfully
-2024-12-08 16:40:48 INFO     bot: Example feature initialized
-2024-12-08 16:40:48 INFO     bot: Loaded feature: example
-2024-12-08 16:40:48 INFO     bot: LLM feature initialized
-2024-12-08 16:40:48 INFO     bot: Loaded feature: llm
-2024-12-08 16:40:48 INFO     bot: Summary feature initialized
-2024-12-08 16:40:48 INFO     bot: Loaded feature: summary
-2024-12-08 16:40:48 INFO     bot: Settings feature initialized
-2024-12-08 16:40:48 INFO     bot: Loaded feature: settings
-2024-12-08 16:40:48 INFO     bot: Blocklist feature initialized
-2024-12-08 16:40:48 INFO     bot: Loaded feature: blocklist
-2024-12-08 16:40:48 INFO     bot: Loaded feature: hot_reloader
-2024-12-08 16:40:57 INFO     bot: Handle Message - Image Attachments:
-2024-12-08 16:40:57 INFO     bot: No image attachments received
-2024-12-08 16:40:57 INFO     bot: Creating new Groq provider
-2024-12-08 16:40:57 INFO     bot: Processing message in channel 1255700504886116457
-2024-12-08 16:40:57 INFO     bot: Sending request to Groq API
-2024-12-08 16:40:58 INFO     bot: Successfully processed message
+2024-12-08 16:41:46 INFO     bot: Starting Nexus Bot...
+2024-12-08 16:41:46 INFO     bot: Command prefix: n!
+2024-12-08 16:41:46 INFO     bot: Connecting to Discord...
+2024-12-08 16:41:46 INFO     bot: Initializing bot...
+2024-12-08 16:41:46 INFO     bot: Storage system initialized successfully
+2024-12-08 16:41:46 INFO     bot: Example feature initialized
+2024-12-08 16:41:46 INFO     bot: Loaded feature: example
+2024-12-08 16:41:46 INFO     bot: LLM feature initialized
+2024-12-08 16:41:46 INFO     bot: Loaded feature: llm
+2024-12-08 16:41:46 INFO     bot: Summary feature initialized
+2024-12-08 16:41:46 INFO     bot: Loaded feature: summary
+2024-12-08 16:41:46 INFO     bot: Settings feature initialized
+2024-12-08 16:41:46 INFO     bot: Loaded feature: settings
+2024-12-08 16:41:46 INFO     bot: Blocklist feature initialized
+2024-12-08 16:41:46 INFO     bot: Loaded feature: blocklist
+2024-12-08 16:41:46 INFO     bot: Loaded feature: hot_reloader
+2024-12-08 16:41:46 INFO     bot: Default settings initialized
+2024-12-08 16:41:46 INFO     bot: Bot setup completed successfully
+2024-12-08 16:41:47 INFO     bot: Successfully connected to Discord
+2024-12-08 16:41:49 INFO     bot: Logged in as Nous (ID: 1255031652724244490)
+2024-12-08 16:41:49 INFO     bot: Connected to 5 guilds
+2024-12-08 16:41:49 INFO     bot: Bot is now ready for use!

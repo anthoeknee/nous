@@ -51,6 +51,7 @@ class NousBot(commands.Bot):
 
         # Initialize default settings
         await self._initialize_default_settings()
+        logger.info("Default settings initialized")
 
         # Store bot start time
         try:
@@ -62,6 +63,33 @@ class NousBot(commands.Bot):
             )
         except Exception as e:
             logger.error(f"Failed to store bot start time: {e}")
+
+        logger.info("Bot setup completed successfully")
+
+    async def on_ready(self):
+        """Called when the bot is ready and connected to Discord"""
+        logger.info(f"Logged in as {self.user.name} (ID: {self.user.id})")
+        logger.info(f"Connected to {len(self.guilds)} guilds")
+        logger.info("Bot is now ready for use!")
+
+        # Set activity if configured
+        if settings.discord_activity:
+            activity = discord.Game(name=settings.discord_activity)
+            await self.change_presence(
+                activity=activity, status=settings.discord_status
+            )
+
+    async def on_connect(self):
+        """Called when the bot connects to Discord"""
+        logger.info("Successfully connected to Discord")
+
+    async def on_disconnect(self):
+        """Called when the bot disconnects from Discord"""
+        logger.warning("Disconnected from Discord")
+
+    async def on_resumed(self):
+        """Called when the bot resumes a session"""
+        logger.info("Session resumed")
 
     async def _initialize_default_settings(self):
         """Initialize default settings including permissions and blocklist"""
