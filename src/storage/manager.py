@@ -9,6 +9,7 @@ from .services.database import DatabaseStorageService
 from .services.hybrid import HybridStorageService
 from src.config import Settings
 import asyncio
+import pymysql
 
 # Create Base model instance
 Base = declarative_base()
@@ -19,36 +20,35 @@ class StorageManager:
         self.settings = settings
         self.storages: Dict[StorageBackend, StorageInterface] = {}
 
-        # Initialize database engine and session
-        if settings.database_url:
-            self.engine = create_engine(settings.database_url)
-            self.SessionLocal = sessionmaker(bind=self.engine)
-            self.session = scoped_session(self.SessionLocal)
-            Base.metadata.create_all(self.engine)
-
         # Initialize configured backends
         if settings.use_memory_storage:
-            self.storages[StorageBackend.MEMORY] = MemoryStorageService()
+            memory_storage = MemoryStorageService()
+            self.storages[StorageBackend.MEMORY] = memory_storage
 
         if settings.redis_url:
-            self.storages[StorageBackend.REDIS] = RedisStorageService(
-                settings.redis_url
-            )
+            redis_storage = RedisStorageService(settings.redis_url)
+            self.storages[StorageBackend.REDIS] = redis_storage
 
         if settings.database_url:
-            self.storages[StorageBackend.DATABASE] = DatabaseStorageService(
-                settings.database_url
-            )
+            db_storage = DatabaseStorageService(settings.database_url)
+            self.storages[StorageBackend.DATABASE] = db_storage
 
         # Initialize hybrid storage if multiple backends are available
         if len(self.storages) > 1:
-            self.storages[StorageBackend.HYBRID] = HybridStorageService(
+            hybrid_storage = HybridStorageService(
                 memory_storage=self.storages.get(StorageBackend.MEMORY),
                 redis_storage=self.storages.get(StorageBackend.REDIS),
                 database_storage=self.storages.get(StorageBackend.DATABASE),
             )
+            self.storages[StorageBackend.HYBRID] = hybrid_storage
 
+        # Set default backend - ensure it exists in storages
         self.default_backend = StorageBackend(settings.default_storage_backend)
+        if self.default_backend not in self.storages:
+            # Fallback to MEMORY if default isn't available
+            self.default_backend = StorageBackend.MEMORY
+            if StorageBackend.MEMORY not in self.storages:
+                self.storages[StorageBackend.MEMORY] = MemoryStorageService()
 
     def get_storage(self, backend: Optional[StorageBackend] = None) -> StorageInterface:
         """Get storage implementation for specified backend"""

@@ -8,6 +8,7 @@ from sqlalchemy import (
     JSON,
     DateTime,
     Integer,
+    BigInteger,
     and_,
 )
 from sqlalchemy.ext.declarative import declarative_base
@@ -27,7 +28,7 @@ class StorageEntry(Base):
     key = Column(String(255), nullable=False, index=True)
     namespace = Column(String(100), nullable=False)
     scope = Column(String(50), nullable=False)
-    scope_id = Column(String(50), nullable=True)
+    scope_id = Column(BigInteger, nullable=True)
     value = Column(JSON, nullable=False)
     expires_at = Column(DateTime, nullable=True)
     version = Column(Integer, default=1)
@@ -46,14 +47,10 @@ class DatabaseStorageService(BaseStorageService):
         self.engine = create_engine(database_url)
         self.SessionLocal = sessionmaker(bind=self.engine)
         Base.metadata.create_all(self.engine)
-
-        # Change notification system
         self._subscribers: Dict[str, List[asyncio.Queue]] = defaultdict(list)
-        self._notification_task = None
 
     async def initialize(self):
         """Initialize async components"""
-        self._notification_task = asyncio.create_task(self._process_notifications())
         return self
 
     async def get(self, key: StorageKey) -> StorageValue:
@@ -151,20 +148,25 @@ class DatabaseStorageService(BaseStorageService):
 
         return fnmatch.fnmatch(key, pattern)
 
-    async def _process_notifications(self):
-        """Process database notifications in the background"""
-        while True:
-            try:
-                # Check for notifications every second
-                await asyncio.sleep(1)
-                # Process any pending notifications from the database
-                for pattern, queues in self._subscribers.items():
-                    for queue in queues:
-                        if not queue.full():
-                            # Check for changes and notify subscribers
-                            pass
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                print(f"Error processing notifications: {e}")
-                await asyncio.sleep(5)  # Back off on error
+    async def subscribe(self, pattern: str) -> asyncio.Queue:
+        """Subscribe to storage events matching pattern"""
+        queue = asyncio.Queue()
+        self._subscribers[pattern].append(queue)
+        return queue
+
+    async def unsubscribe(self, pattern: str, queue: asyncio.Queue) -> None:
+        """Unsubscribe from storage events"""
+        if pattern in self._subscribers:
+            if queue in self._subscribers[pattern]:
+                self._subscribers[pattern].remove(queue)
+            if not self._subscribers[pattern]:
+                del self._subscribers[pattern]
+
+    async def cleanup(self) -> None:
+        """Clean up expired entries"""
+        with self.SessionLocal() as session:
+            current_time = datetime.utcnow()
+            session.query(StorageEntry).filter(
+                StorageEntry.expires_at < current_time
+            ).delete()
+            session.commit()

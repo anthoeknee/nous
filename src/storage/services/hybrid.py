@@ -163,3 +163,31 @@ class HybridStorageService(BaseStorageService):
         import fnmatch
 
         return fnmatch.fnmatch(key, pattern)
+
+    async def subscribe(self, pattern: str) -> asyncio.Queue:
+        """Subscribe to storage events matching pattern"""
+        queue = asyncio.Queue()
+        self._subscribers[pattern].append(queue)
+        return queue
+
+    async def unsubscribe(self, pattern: str, queue: asyncio.Queue) -> None:
+        """Unsubscribe from storage events"""
+        if pattern in self._subscribers:
+            if queue in self._subscribers[pattern]:
+                self._subscribers[pattern].remove(queue)
+            if not self._subscribers[pattern]:
+                del self._subscribers[pattern]
+
+    async def cleanup(self) -> None:
+        """Clean up expired values from all storages"""
+        tasks = []
+
+        if self.memory:
+            tasks.append(self.memory.cleanup())
+        if self.redis:
+            tasks.append(self.redis.cleanup())
+        if self.database:
+            tasks.append(self.database.cleanup())
+
+        if tasks:
+            await asyncio.gather(*tasks)

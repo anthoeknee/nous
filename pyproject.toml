@@ -16,6 +16,7 @@ alembic = "^1.14.0"
 aiosqlite = "^0.20.0"
 watchdog = "^6.0.0"
 redis = "^5.2.1"
+pymysql = "^1.1.1"
 
 
 

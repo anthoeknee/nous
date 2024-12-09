@@ -990,6 +990,21 @@ toml = ["tomli (>=2.0.1)"]
 yaml = ["pyyaml (>=6.0.1)"]
 
 [[package]]
+name = "pymysql"
+version = "1.1.1"
+description = "Pure Python MySQL Driver"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "PyMySQL-1.1.1-py3-none-any.whl", hash = "sha256:4de15da4c61dc132f4fb9ab763063e693d521a80fd0e87943b9a453dd4c19d6c"},
+    {file = "pymysql-1.1.1.tar.gz", hash = "sha256:e127611aaf2b417403c60bf4dc570124aeb4a57f5f37b8e95ae399a42f904cd0"},
+]
+
+[package.extras]
+ed25519 = ["PyNaCl (>=1.4.0)"]
+rsa = ["cryptography"]
+
+[[package]]
 name = "python-dotenv"
 version = "1.0.1"
 description = "Read key-value pairs from a .env file and set them as environment variables"
@@ -1279,4 +1294,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "50ca7b91879cb7527bce17ef2b209596a382c2595391a1095ffddf97e3ff4f59"
+content-hash = "02ab61f28bec54ff59b3f5058d75af83ec4b28009b83f8c898200f680dc546e8"

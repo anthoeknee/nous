@@ -3,6 +3,7 @@ import sys
 from src.bot import NousBot
 from src.config import conf
 from src.utils.logging import logger
+import discord
 
 settings = conf()
 
@@ -14,8 +15,22 @@ async def main():
         logger.info(f"Command prefix: {settings.discord_command_prefix}")
 
         bot = NousBot()
-        async with bot:
-            await bot.start(settings.discord_token)
+
+        try:
+            async with bot:
+                logger.info("Connecting to Discord...")
+                await bot.start(settings.discord_token)
+        except discord.LoginFailure:
+            logger.critical("Failed to login to Discord. Please check your token.")
+            return
+        except discord.PrivilegedIntentsRequired:
+            logger.critical(
+                "Privileged intents are required but not enabled in the Discord Developer Portal."
+            )
+            return
+        except Exception as e:
+            logger.critical(f"Failed to connect to Discord: {str(e)}")
+            return
 
     except Exception as e:
         logger.critical(f"Failed to start bot: {str(e)}")

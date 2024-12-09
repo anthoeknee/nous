@@ -10,13 +10,14 @@ root_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(root_path)
 
 # Now we can import our project modules
-from src.database.manager import Base
+from src.storage.manager import Base
 from src.config import Settings
+from src.storage.events import StorageEvent, StorageEventType
 
 settings = Settings()
 
 # Load all models to be detected by Alembic
-from src.database.models import *
+from src.storage.models import *
 
 config = context.config
 
@@ -46,6 +47,10 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     configuration = config.get_section(config.config_ini_section)
     configuration["sqlalchemy.url"] = get_url()
+
+    # Initialize subscribers list for events
+    configuration["_subscribers"] = []
+
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",
@@ -53,7 +58,12 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            # Add support for storage events
+            process_revision_directives=process_revision_directives,
+        )
 
         with context.begin_transaction():
             context.run_migrations()

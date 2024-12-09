@@ -9,5 +9,20 @@ services:
     volumes:
       - redis-stack-data:/data
     restart: unless-stopped
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "rT9xK3pQ7zJ2mN5"  # Randomly generated semi-strong password without special characters
+      MYSQL_DATABASE: "nous-db"  # Use a more descriptive database name
+      MYSQL_USER: "nous"  # Use a more descriptive user name
+      MYSQL_PASSWORD: "zK7xN2pQ9rJ5mT3" # Change this in production!
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: unless-stopped
+
 volumes:
   redis-stack-data:
+  mysql-data:

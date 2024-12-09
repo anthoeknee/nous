@@ -1,87 +1,128 @@
-from typing import Dict, List, Optional, AsyncIterator, Tuple
-from collections import defaultdict
-import time
+from typing import Dict, List, Any, Optional, Set, AsyncIterator, Tuple
+from datetime import datetime
 import asyncio
-from ..interfaces import StorageValue, StorageKey, StorageScope
-from .base import BaseStorageService
+import re
+import time
+from ..interfaces import (
+    StorageInterface,
+    StorageKey,
+    StorageValue,
+    StorageEvent,
+    StorageEventType,
+)
+from collections import defaultdict
 
 
-class MemoryStorageService(BaseStorageService):
-    def __init__(self, prefix: str = "bot"):
-        super().__init__(prefix)
-        self._storage: Dict[str, Dict[str, StorageValue]] = defaultdict(dict)
-        self._indices: Dict[str, Dict[str, List[str]]] = defaultdict(
-            lambda: defaultdict(list)
-        )
-        self._subscribers: Dict[str, List[asyncio.Queue]] = defaultdict(list)
-
-    def _make_index_key(self, scope: StorageScope, scope_id: Optional[int]) -> str:
-        return f"{scope.value}:{scope_id if scope_id is not None else '*'}"
+class MemoryStorageService(StorageInterface):
+    def __init__(self):
+        self._data = {}
+        self._subscribers = {}
+        self._expiry_times = {}
 
     async def get(self, key: StorageKey) -> StorageValue:
-        storage_key = self._make_key(key)
-        value = self._storage.get(key.namespace, {}).get(storage_key)
+        """Get a value from memory storage"""
+        key_str = str(key)
+        if key_str not in self._data:
+            raise KeyError(f"Key not found: {key_str}")
 
-        if not value:
-            raise KeyError(f"Key {storage_key} not found")
+        # Check expiration
+        if key_str in self._expiry_times:
+            if datetime.now().timestamp() > self._expiry_times[key_str]:
+                del self._data[key_str]
+                del self._expiry_times[key_str]
+                raise KeyError(f"Key expired: {key_str}")
 
-        if value.expires_at and value.expires_at < time.time():
-            await self.delete(key)
-            raise KeyError(f"Key {storage_key} has expired")
-
-        return value
+        return self._data[key_str]
 
     async def set(self, key: StorageKey, value: StorageValue) -> None:
-        storage_key = self._make_key(key)
-        index_key = self._make_index_key(key.scope, key.scope_id)
+        """Set a value in memory storage"""
+        self._data[key] = value.value
+        if value.expires_at:
+            self._expiry_times[key] = value.expires_at
 
-        if key.namespace not in self._storage:
-            self._storage[key.namespace] = {}
-
-        self._storage[key.namespace][storage_key] = value
-        self._indices[key.namespace][index_key].append(storage_key)
+        # Create storage event
+        event = StorageEvent(type=StorageEventType.SET, key=key, value=value)
 
         # Notify subscribers
-        for pattern, queues in self._subscribers.items():
-            if self._key_matches_pattern(storage_key, pattern):
-                for queue in queues:
-                    await queue.put((key, value))
+        await self._notify_subscribers(event)
 
     async def delete(self, key: StorageKey) -> None:
-        storage_key = self._make_key(key)
-        index_key = self._make_index_key(key.scope, key.scope_id)
+        """Delete a value from memory storage"""
+        key_str = str(key)
+        if key_str in self._data:
+            del self._data[key_str]
+            if key_str in self._expiry_times:
+                del self._expiry_times[key_str]
 
-        if storage_key in self._storage.get(key.namespace, {}):
-            del self._storage[key.namespace][storage_key]
-            self._indices[key.namespace][index_key].remove(storage_key)
+            # Notify subscribers
+            event = StorageEvent(type=StorageEventType.DELETE, key=key, value=None)
+            await self._notify_subscribers(event)
 
     async def list(
-        self, scope: StorageScope, scope_id: Optional[int] = None
+        self, scope: str, scope_id: Optional[int] = None
     ) -> List[StorageKey]:
-        index_key = self._make_index_key(scope, scope_id)
+        """List all keys in a scope"""
         keys = []
-
-        for namespace, indices in self._indices.items():
-            for storage_key in indices.get(index_key, []):
-                keys.append(self._parse_key(storage_key))
-
+        prefix = f"{scope}:{scope_id if scope_id else ''}"
+        for key_str in self._data.keys():
+            if key_str.startswith(prefix):
+                parts = key_str.split(":")
+                keys.append(
+                    StorageKey(
+                        name=parts[-1],
+                        scope=scope,
+                        scope_id=scope_id,
+                        namespace=parts[2] if len(parts) > 3 else None,
+                    )
+                )
         return keys
-
-    def _key_matches_pattern(self, key: str, pattern: str) -> bool:
-        """Check if a key matches a glob-style pattern"""
-        import fnmatch
-
-        return fnmatch.fnmatch(key, pattern)
 
     async def watch(
         self, pattern: str
     ) -> AsyncIterator[Tuple[StorageKey, StorageValue]]:
-        queue = asyncio.Queue()
-        watch_pattern = f"{self.prefix}:{pattern}"
-        self._subscribers[watch_pattern].append(queue)
-
+        """Watch for changes to keys matching pattern"""
+        queue = await self.subscribe(pattern)
         try:
             while True:
-                yield await queue.get()
+                event = await queue.get()
+                if event.type in [StorageEventType.SET, StorageEventType.DELETE]:
+                    yield (event.key, event.value)
         finally:
-            self._subscribers[watch_pattern].remove(queue)
+            await self.unsubscribe(pattern, queue)
+
+    async def subscribe(self, pattern: str) -> asyncio.Queue:
+        """Subscribe to storage events matching pattern"""
+        queue = asyncio.Queue()
+        self._subscribers[pattern].add(queue)
+        return queue
+
+    async def unsubscribe(self, pattern: str, queue: asyncio.Queue) -> None:
+        """Unsubscribe from storage events"""
+        if pattern in self._subscribers:
+            self._subscribers[pattern].discard(queue)
+            if not self._subscribers[pattern]:
+                del self._subscribers[pattern]
+
+    async def _notify_subscribers(self, event: StorageEvent) -> None:
+        """Notify subscribers of storage events"""
+        for pattern, queues in self._subscribers.items():
+            if self._matches_pattern(event.key, pattern):
+                for queue in queues:
+                    await queue.put(event)
+
+    async def initialize(self) -> None:
+        """Initialize the storage service"""
+        pass  # No initialization needed for memory storage
+
+    async def cleanup(self) -> None:
+        """Clean up expired values"""
+        current_time = datetime.now().timestamp()
+        expired_keys = [
+            key
+            for key, expiry_time in self._expiry_times.items()
+            if current_time > expiry_time
+        ]
+        for key in expired_keys:
+            if key in self._data:
+                del self._data[key]
+                del self._expiry_times[key]

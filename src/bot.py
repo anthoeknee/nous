@@ -37,17 +37,13 @@ class NousBot(commands.Bot):
         logger.info("Initializing bot...")
 
         # Initialize storage
-        try:
-            await self.storage.initialize()
-            # Use hybrid storage if available, fallback to database
-            if StorageBackend.HYBRID in self.storage.storages:
-                self.state = self.storage.get_storage(StorageBackend.HYBRID)
-            else:
-                self.state = self.storage.get_storage()
-            logger.info("Storage system initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize storage: {e}")
-            raise
+        await self.storage.initialize()
+        # Use hybrid storage if available, fallback to database
+        if StorageBackend.HYBRID in self.storage.storages:
+            self.state = self.storage.get_storage(StorageBackend.HYBRID)
+        else:
+            self.state = self.storage.get_storage()
+        logger.info("Storage system initialized successfully")
 
         # Initialize feature manager and load features
         self.feature_manager = FeatureManager(self)
