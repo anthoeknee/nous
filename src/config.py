@@ -3,6 +3,7 @@ from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from urllib.parse import quote_plus
 import logging
+from pydantic import Field, validator
 
 logger = logging.getLogger("discord_bot")
 
@@ -23,10 +24,10 @@ class Settings(BaseSettings):
     google_api_key: str
 
     # Database Configuration
-    database_session_url: str
-    database_transaction_url: str
-    database_direct_url: str
-    use_connection_pooling: bool = True
+    database_session_url: str = Field(..., env="DATABASE_SESSION_URL")
+    database_transaction_url: str = Field(..., env="DATABASE_TRANSACTION_URL")
+    database_direct_url: str = Field(..., env="DATABASE_DIRECT_URL")
+    use_connection_pooling: bool = Field(True, env="USE_CONNECTION_POOLING")
 
     # Pooling Configuration
     database_pool_size: int = 20
@@ -62,9 +63,23 @@ class Settings(BaseSettings):
     @property
     def active_database_url(self) -> str:
         """Returns the appropriate database URL based on pooling configuration"""
-        if self.use_connection_pooling:
-            return self.database_transaction_url  # Use transaction pooler URL
-        return self.database_direct_url  # Use direct connection
+        url = (
+            self.database_transaction_url
+            if self.use_connection_pooling
+            else self.database_direct_url
+        )
+        # Add debug logging
+        logger.debug(f"Raw database URL: {url}")
+
+        # Ensure URL has correct protocol
+        if not url.startswith("postgresql+asyncpg://"):
+            if url.startswith("postgresql://"):
+                url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+                logger.debug(f"Updated database URL protocol: {url}")
+            else:
+                logger.error(f"Unexpected database URL format: {url}")
+
+        return url
 
     @property
     def pooling_kwargs(self) -> dict:
@@ -78,6 +93,14 @@ class Settings(BaseSettings):
                 "pool_recycle": self.database_pool_recycle,
             }
         return {}  # No pooling for direct connection
+
+    @validator(
+        "database_session_url", "database_transaction_url", "database_direct_url"
+    )
+    def validate_database_urls(cls, v):
+        if not v.startswith(("postgresql://", "postgresql+asyncpg://")):
+            raise ValueError(f"Invalid database URL format: {v[:10]}...")
+        return v
 
 
 @lru_cache

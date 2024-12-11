@@ -1,6 +1,7 @@
 from typing import Optional, Type, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql import text
 
 from .services.cache import RedisCacheService
 from .services.database import PostgresDatabaseService
@@ -38,9 +39,17 @@ class StorageManager:
                 "pool_use_lifo": True,
             }
 
+            # Add connect_args to disable statement cache for pgbouncer compatibility
+            connect_args = {
+                "statement_cache_size": 0,
+                "prepared_statement_cache_size": 0,
+            }
+
             # Use transaction pooler URL for normal operations
             self.engine = create_async_engine(
-                settings.active_database_url, **pool_settings
+                settings.active_database_url,
+                connect_args=connect_args,  # Add this line
+                **pool_settings,
             )
 
             self.session_factory = sessionmaker(
@@ -60,6 +69,7 @@ class StorageManager:
 
         except Exception as e:
             logger.error(f"Failed to initialize storage services: {str(e)}")
+            logger.exception("Full traceback:")
             raise
 
     def get_database(self, model: Type[BaseModel]) -> PostgresDatabaseService:

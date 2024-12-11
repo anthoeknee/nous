@@ -1,0 +1,9 @@
+[2024-12-11 15:29:17] INFO     discord_bot: === New Bot Session Started ===
+[2024-12-11 15:29:17] INFO     discord_bot: Initialized StorageManager
+[2024-12-11 15:29:17] INFO     discord_bot: Starting bot...
+[2024-12-11 15:29:18] INFO     discord_bot: Initialized Redis cache service with prefix: bot:
+[2024-12-11 15:29:18] INFO     discord_bot: Storage services initialized successfully
+[2024-12-11 15:29:18] INFO     discord_bot: Bot setup completed successfully
+[2024-12-11 15:29:21] INFO     discord_bot: Logged in as Nous (1255031652724244490)
+[2024-12-11 15:29:21] INFO     discord_bot: Connected to 5 guilds
+[2024-12-11 15:29:23] INFO     discord_bot: Bot shutdown by user

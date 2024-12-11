@@ -9,12 +9,17 @@ from src.config import settings
 config = context.config
 target_metadata = Base.metadata
 
-# Modify the direct URL to force IPv4 and use the correct host
+# Get the appropriate URL for migrations (use direct URL)
 db_url = settings.database_direct_url
+
+# For migrations, we need to use psycopg2 (not asyncpg)
+if db_url.startswith("postgresql+asyncpg://"):
+    db_url = db_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+
+# Modify the URL for Supabase pgbouncer if needed
 if "supabase.co" in db_url:
-    # Replace the host with the IPv4 pooler host
     db_url = db_url.replace(
-        "db.tgzhoarwrhtremwyoqmw.supabase.co", "aws-0-us-east-1.pooler.supabase.com"
+        "db.tgzhoarwrhtremwyoqmw.supabase.com", "aws-0-us-east-1.pooler.supabase.com"
     )
 
 # Escape % for ConfigParser
@@ -26,6 +31,7 @@ if config.config_file_name is not None:
 
 
 def run_migrations_offline() -> None:
+    """Run migrations in 'offline' mode."""
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -39,9 +45,11 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
+    """Run migrations in 'online' mode."""
     configuration = config.get_section(config.config_ini_section)
     configuration["sqlalchemy.url"] = config.get_main_option("sqlalchemy.url")
 
+    # Create the engine without the statement cache settings
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",
@@ -52,6 +60,8 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
+            compare_type=True,
+            compare_server_default=True,
         )
 
         with context.begin_transaction():
